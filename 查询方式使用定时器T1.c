@@ -1,61 +1,59 @@
 #include <ioCC2530.h>
-#define uint   unsigned  int
-#define uchar  unsigned  char
 
-#define LED1   P1_0	        //定义LED1为P10口控制
-#define LED2   P1_1	        //定义LED2为P11口控制
-#define LED3   P0_4	        //定义LED3为P04口控制
+#define uint unsigned int
+#define uchar unsigned char
 
-uint counter=0;				//统计溢出次数
-uint LEDFlag;				//标志是否要闪烁
+//定义控制LED灯的端口
+#define LED1 P1_0	//定义LED1为P10口控制
 
-void InitialT1test(void);               //初始化函数声明
+//函数声明
+void Delayms(uint xms);		//延时函数
+void InitLed(void);		//初始化P1口
+void InitT1();                  //初始化定时器T1
 
 /****************************
-//T1初始化程序
-***************************/
-void InitialT1test(void)
+//延时函数
+*****************************/
+void Delayms(uint xms)   //i=xms 即延时i毫秒
 {
-	//初始化LED控制端口P1
-	P1DIR = 0x03; 	         //P10 P11 为输出
-        P0DIR = 0x10;            //P04为输出
-        //灯默认为灭
-	LED1 = 1;
-	LED2 = 1;		
-        LED3 = 1;
-        
-	//初始化计数器1
-	T1CTL = 0x05;	
-        T1STAT= 0x21;          //通道0,中断有效,8分频;自动重装模式(0x0000->0xffff)        
+ uint i,j;
+ for(i=xms;i>0;i--)
+   for(j=587;j>0;j--);
+} 
+
+/****************************
+//初始化程序
+*****************************/
+void InitLed(void)
+{
+    P1DIR |= 0x03; //P1_0定义为输出
+    LED1 = 1;       //LED1灯初始化熄灭
+    
 }
+//定时器初始化
+void InitT1() //系统不配置工作时钟时默认是2分频，即16MHz
+{
+  T1CTL = 0x0d;          //128分频，自动重装 0X0000-0XFFFF 
+  T1STAT= 0x21;          //通道0, 中断有效   
+}
+
 /***************************
 //主函数
 ***************************/
-void main()
+void main(void)
 {
-  InitialT1test(); 	 //调用初始化函数
-  while(1)   	         //查询溢出
-  {
-    if(IRCON > 0)
-    {
-      IRCON = 0;                //清溢出标志     
-      counter++;
-      
-      if(counter==15)            //中断计数，约0.25s
-      {
-        counter =0;
-        LEDFlag = !LEDFlag;
-      }
-    }
-    
-    if(LEDFlag)
-    {
-      LED2 =  LED1;
-      LED3 = !LED2;
-      LED1 = !LED1;	   // 每 1s LED灯闪烁一下 
-      LEDFlag = !LEDFlag;   // 闪烁标志变量置0
-    }                
-  }
+        uchar count = 0;
+	InitLed();		//调用初始化函数
+        InitT1();
+	while(1)
+	{
+          if(IRCON>0)
+          { IRCON=0;
+            if(++count>=1)      //约1s周期性闪烁
+            {
+              count=0;
+              LED1 = !LED1;        //LED1闪烁        
+            }
+           } 
+	}
 }
-
-
